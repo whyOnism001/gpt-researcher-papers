@@ -9,21 +9,21 @@ from backend.chat import ChatAgentWithMemory
 
 from gpt_researcher.utils.enum import ReportType, Tone
 from multi_agents.main import run_research_task
-from gpt_researcher.actions import stream_output  # Import stream_output
+from gpt_researcher.actions import stream_output  # 导入 stream_output
 
 
 class WebSocketManager:
-    """Manage websockets"""
+    """管理WebSocket连接"""
 
     def __init__(self):
-        """Initialize the WebSocketManager class."""
+        """初始化WebSocketManager类"""
         self.active_connections: List[WebSocket] = []
         self.sender_tasks: Dict[WebSocket, asyncio.Task] = {}
         self.message_queues: Dict[WebSocket, asyncio.Queue] = {}
         self.chat_agent = None
 
     async def start_sender(self, websocket: WebSocket):
-        """Start the sender task."""
+        """启动发送者任务"""
         queue = self.message_queues.get(websocket)
         if not queue:
             return
@@ -42,7 +42,7 @@ class WebSocketManager:
                 break
 
     async def connect(self, websocket: WebSocket):
-        """Connect a websocket."""
+        """连接WebSocket"""
         await websocket.accept()
         self.active_connections.append(websocket)
         self.message_queues[websocket] = asyncio.Queue()
@@ -50,7 +50,7 @@ class WebSocketManager:
             self.start_sender(websocket))
 
     async def disconnect(self, websocket: WebSocket):
-        """Disconnect a websocket."""
+        """断开WebSocket连接"""
         if websocket in self.active_connections:
             self.active_connections.remove(websocket)
             self.sender_tasks[websocket].cancel()
@@ -59,26 +59,26 @@ class WebSocketManager:
             del self.message_queues[websocket]
 
     async def start_streaming(self, task, report_type, report_source, source_urls, tone, websocket, headers=None):
-        """Start streaming the output."""
+        """开始流式传输输出"""
         tone = Tone[tone]
-        # add customized JSON config file path here
+        # 在此处添加自定义的JSON配置文件路径
         config_path = "default"
-        report = await run_agent(task, report_type, report_source, source_urls, tone, websocket, headers = headers, config_path = config_path)
-        #Create new Chat Agent whenever a new report is written
+        report = await run_agent(task, report_type, report_source, source_urls, tone, websocket, headers=headers, config_path=config_path)
+        # 每次编写新报告时创建新的聊天代理
         self.chat_agent = ChatAgentWithMemory(report, config_path, headers)
         return report
 
     async def chat(self, message, websocket):
-        """Chat with the agent based message diff"""
+        """基于消息差异与代理聊天"""
         if self.chat_agent:
             await self.chat_agent.chat(message, websocket)
         else:
-            await websocket.send_json({"type": "chat", "content": "Knowledge empty, please run the research first to obtain knowledge"})
+            await websocket.send_json({"type": "chat", "content": "知识库为空，请先运行研究以获取知识"})
 
 async def run_agent(task, report_type, report_source, source_urls, tone: Tone, websocket, headers=None, config_path=""):
-    """Run the agent."""
+    """运行代理"""
     start_time = datetime.datetime.now()
-    # Instead of running the agent directly run it through the different report type classes
+    # 通过不同的报告类型类来运行代理，而不是直接运行代理
     if report_type == "multi_agents":
         report = await run_research_task(query=task, websocket=websocket, stream_output=stream_output, tone=tone, headers=headers)
         report = report.get("report", "")
@@ -107,10 +107,10 @@ async def run_agent(task, report_type, report_source, source_urls, tone: Tone, w
         )
         report = await researcher.run()
 
-    # measure time
+    # 测量时间
     end_time = datetime.datetime.now()
     await websocket.send_json(
-        {"type": "logs", "output": f"\nTotal run time: {end_time - start_time}\n"}
+        {"type": "logs", "output": f"\n总运行时间：{end_time - start_time}\n"}
     )
 
     return report

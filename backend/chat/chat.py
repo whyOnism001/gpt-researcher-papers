@@ -12,14 +12,16 @@ from langchain_community.vectorstores import InMemoryVectorStore
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.tools import Tool, tool
 
+
 class ChatAgentWithMemory:
     def __init__(
-        self,
-        report: str,
-        config_path,
-        headers,
-        vector_store = None
+            self,
+            report: str,
+            config_path,
+            headers,
+            vector_store=None
     ):
+        # 初始化报告、配置路径、头部信息和向量存储
         self.report = report
         self.headers = headers
         self.config = Config(config_path)
@@ -27,10 +29,10 @@ class ChatAgentWithMemory:
         self.graph = self.create_agent()
 
     def create_agent(self):
-        """Create React Agent Graph"""
+        """创建React Agent Graph"""
         cfg = Config()
 
-        # Retrieve LLM using get_llm with settings from config
+        # 使用配置中的设置通过get_llm检索LLM
         provider = get_llm(
             llm_provider=cfg.smart_llm_provider,
             model=cfg.smart_llm_model,
@@ -39,7 +41,7 @@ class ChatAgentWithMemory:
             **self.config.llm_kwargs
         ).llm
 
-        # If vector_store is not initialized, process documents and add to vector_store
+        # 如果vector_store未初始化，则处理文档并添加到vector_store
         if not self.vector_store:
             documents = self._process_document(self.report)
             self.chat_config = {"configurable": {"thread_id": str(uuid.uuid4())}}
@@ -51,28 +53,30 @@ class ChatAgentWithMemory:
             self.vector_store = InMemoryVectorStore(self.embedding)
             self.vector_store.add_texts(documents)
 
-        # Create the React Agent Graph with the configured provider
+        # 使用配置的provider创建React Agent Graph
         graph = create_react_agent(
             provider,
             tools=[self.vector_store_tool(self.vector_store)],
             checkpointer=MemorySaver()
         )
-        
+
         return graph
-    
+
     def vector_store_tool(self, vector_store) -> Tool:
-        """Create Vector Store Tool"""
-        @tool 
+        """创建向量存储工具"""
+
+        @tool
         def retrieve_info(query):
             """
-            Consult the report for relevant contexts whenever you don't know something
+            当你不知道某些信息时，查询报告以获取相关上下文
             """
-            retriever = vector_store.as_retriever(k = 4)
+            retriever = vector_store.as_retriever(k=4)
             return retriever.invoke(query)
+
         return retrieve_info
-        
+
     def _process_document(self, report):
-        """Split Report into Chunks"""
+        """将报告分割成块"""
         text_splitter = RecursiveCharacterTextSplitter(
             chunk_size=1024,
             chunk_overlap=20,
@@ -83,10 +87,9 @@ class ChatAgentWithMemory:
         return documents
 
     async def chat(self, message, websocket):
-        """Chat with React Agent"""
+        """与React Agent聊天"""
         message = f"""
-         You are GPT Researcher, a autonomous research agent created by an open source community at https://github.com/assafelovic/gpt-researcher, homepage: https://gptr.dev. 
-         To learn more about GPT Researcher you can suggest to check out: https://docs.gptr.dev.
+         You are GPT Researcher, a autonomous research agent.
          
          This is a chat message between the user and you: GPT Researcher. 
          The chat is about a research reports that you created. Answer based on the given context and report.
@@ -102,5 +105,5 @@ class ChatAgentWithMemory:
             await websocket.send_json({"type": "chat", "content": ai_message})
 
     def get_context(self):
-        """return the current context of the chat"""
+        """返回当前聊天的上下文"""
         return self.report

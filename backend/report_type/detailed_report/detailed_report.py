@@ -4,7 +4,7 @@ from fastapi import WebSocket
 
 from gpt_researcher import GPTResearcher
 
-
+# 定义一个详细报告类
 class DetailedReport:
     def __init__(
         self,
@@ -18,6 +18,7 @@ class DetailedReport:
         subtopics: List[Dict] = [],
         headers: Optional[Dict] = None
     ):
+        # 初始化查询、报告类型、报告来源、来源网址、语气、配置路径、WebSocket连接、子话题和头部信息
         self.query = query
         self.report_type = report_type
         self.report_source = report_source
@@ -28,6 +29,7 @@ class DetailedReport:
         self.subtopics = subtopics
         self.headers = headers or {}
 
+        # 初始化GPT研究者实例
         self.gpt_researcher = GPTResearcher(
             query=self.query,
             report_type="research_report",
@@ -38,12 +40,14 @@ class DetailedReport:
             websocket=self.websocket,
             headers=self.headers
         )
+        # 初始化已存在的头部信息、全局上下文和已编写的章节
         self.existing_headers: List[Dict] = []
         self.global_context: List[str] = []
         self.global_written_sections: List[str] = []
         self.global_urls: Set[str] = set(
             self.source_urls) if self.source_urls else set()
 
+    # 异步运行方法，用于生成详细报告
     async def run(self) -> str:
         await self._initial_research()
         subtopics = await self._get_all_subtopics()
@@ -53,11 +57,13 @@ class DetailedReport:
         report = await self._construct_detailed_report(report_introduction, report_body)
         return report
 
+    # 进行初始研究
     async def _initial_research(self) -> None:
         await self.gpt_researcher.conduct_research()
         self.global_context = self.gpt_researcher.context
         self.global_urls = self.gpt_researcher.visited_urls
 
+    # 获取所有子话题
     async def _get_all_subtopics(self) -> List[Dict]:
         subtopics_data = await self.gpt_researcher.get_subtopics()
 
@@ -70,6 +76,7 @@ class DetailedReport:
 
         return all_subtopics
 
+    # 生成子话题报告
     async def _generate_subtopic_reports(self, subtopics: List[Dict]) -> tuple:
         subtopic_reports = []
         subtopics_report_body = ""
@@ -82,6 +89,7 @@ class DetailedReport:
 
         return subtopic_reports, subtopics_report_body
 
+    # 获取子话题报告
     async def _get_subtopic_report(self, subtopic: Dict) -> Dict[str, str]:
         current_subtopic_task = subtopic.get("task")
         subtopic_assistant = GPTResearcher(
@@ -127,6 +135,7 @@ class DetailedReport:
 
         return {"topic": subtopic, "report": subtopic_report}
 
+    # 构建详细报告
     async def _construct_detailed_report(self, introduction: str, report_body: str) -> str:
         toc = self.gpt_researcher.table_of_contents(report_body)
         conclusion = await self.gpt_researcher.write_report_conclusion(report_body)

@@ -3,7 +3,7 @@ from typing import Any
 
 from gpt_researcher import GPTResearcher
 
-
+# 定义一个基础报告类
 class BasicReport:
     def __init__(
         self,
@@ -16,6 +16,7 @@ class BasicReport:
         websocket: WebSocket,
         headers=None
     ):
+        # 初始化查询、报告类型、报告来源、来源网址、语气、配置路径、WebSocket连接和头部信息
         self.query = query
         self.report_type = report_type
         self.report_source = report_source
@@ -26,7 +27,7 @@ class BasicReport:
         self.headers = headers or {}
 
     async def run(self):
-        # Initialize researcher
+        # 初始化研究者
         researcher = GPTResearcher(
             query=self.query,
             report_type=self.report_type,
@@ -38,6 +39,7 @@ class BasicReport:
             headers=self.headers
         )
 
+        # 进行研究并生成报告
         await researcher.conduct_research()
         report = await researcher.write_report()
         return report
